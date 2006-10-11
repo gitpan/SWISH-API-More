@@ -1,13 +1,5 @@
 package SWISH::API::More;
 
-# other ideas:
-# with wrap_methods() and make_methods()
-# wrap_methods() = similar to what we do now with typeglob aliases
-# make_methods() would check if ->can and then use returned sub ref
-# to typeglob a *_before() or *_after() method
-# still uses subrefs and typeglobs, but make_methods() would let
-# you write traditional subclass style
-
 use strict;
 use warnings;
 use SWISH::API;
@@ -15,7 +7,7 @@ use Carp;
 use Data::Dump qw/pp/;
 use base qw/ Class::Accessor::Fast /;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 __PACKAGE__->mk_accessors(
     qw/
@@ -312,7 +304,7 @@ sub init
     $self->{_thisclass} = ref($self) || $self;
     ($self->{_thispackage}  = __PACKAGE__)         =~ s,^SWISH::API::,,;
     ($self->{_thissubclass} = $self->{_thisclass}) =~ s,^SWISH::API::,,;
-
+    
     $self->wrap_methods;
     $self->make_methods;
 

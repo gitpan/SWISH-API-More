@@ -7,6 +7,7 @@ WriteMakefile(
     PREREQ_PM         => {
                       'SWISH::API' => '0.04',
                       'Data::Dump' => '1.06',
+                      'Class::Accessor::Fast' => '0.22',
 
     }, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005

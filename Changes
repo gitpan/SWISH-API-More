@@ -4,3 +4,6 @@ Revision history for Perl extension SWISH::API::More.
 	- original version; created by h2xs 1.23 with options
 		-XA -n SWISH::API::More
 
+0.02
+    * misc cleanup
+
