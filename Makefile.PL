@@ -1,6 +1,4 @@
 use ExtUtils::MakeMaker;
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
 WriteMakefile(
     NAME              => 'SWISH::API::More',
     VERSION_FROM      => 'lib/SWISH/API/More.pm', # finds $VERSION
@@ -8,6 +6,8 @@ WriteMakefile(
                       'SWISH::API' => '0.04',
                       'Data::Dump' => '1.06',
                       'Class::Accessor::Fast' => '0.22',
+                      'Class::ISA' => 0.01,
+                      'Class::Inspector' => 0.01
 
     }, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005

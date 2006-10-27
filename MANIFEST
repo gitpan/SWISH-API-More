@@ -4,4 +4,10 @@ MANIFEST
 README
 t/SWISH-API-More.t
 lib/SWISH/API/More.pm
+lib/SWISH/API/More/Search.pm
+lib/SWISH/API/More/Results.pm
+lib/SWISH/API/More/Result.pm
+lib/SWISH/API/More/PropertyList.pm
+lib/SWISH/API/More/MetaList.pm
+lib/SWISH/API/More/FuzzyWord.pm
 META.yml                                 Module meta-data (added by MakeMaker)

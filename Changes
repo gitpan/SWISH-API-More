@@ -7,3 +7,9 @@ Revision history for Perl extension SWISH::API::More.
 0.02
     * misc cleanup
 
+0.03
+    * Complete re-write to support multiple instances in same Perl process.
+      No more ugly Symbol table mangling. Instead uses Class::ISA and Class::Inspector
+      and caches subclass names per object.
+    * Split subclasses up into separate .pm files.
+

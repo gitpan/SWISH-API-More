@@ -1,269 +1,58 @@
 package SWISH::API::More;
-
 use strict;
 use warnings;
 use SWISH::API;
 use Carp;
-use Data::Dump qw/pp/;
-use base qw/ Class::Accessor::Fast /;
+use Data::Dump qw( pp );
+use base qw( Class::Accessor::Fast );
+use UNIVERSAL qw(isa);
+use Class::ISA;
+use Class::Inspector;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
+
+my @subclasses = qw( Search Results Result FuzzyWord MetaList PropertyList );
+my %bases      = ();
 
 __PACKAGE__->mk_accessors(
-    qw/
+    qw(
+      debug
       indexes
       log
-      /
+      register
+      )
 );
 
-sub _dispSymbols
+for (@subclasses)
 {
-    my ($hashRef) = shift;
-    for (sort keys %$hashRef)
-    {
-        printf("%-20.20s| %s\n", $_, $hashRef->{$_});
-    }
-}
-
-# for each class and subclass in SWISH::API
-# typeglob each method to a closure
-# that passes the enclosing object on to the SUPER equivalent
-
-# this is the hard way. the easy way would be 'use base "SWISH::API"'
-# but because it's all XS, the swish_handle is always just a blessed C pointer
-# and not our friendly blessed Perl hashref
-
-sub wrap_methods
-{
-    my $self = shift;
-    my $w    = shift || $self->{wrappers} || {};
-
-    return if $self->{_wrap_methods_called}++;
-
-    #carp "thisclass = $self->{_thisclass}";
-    #carp "thispackage = $self->{_thispackage}";
-    #carp "thissubclass = $self->{_thissubclass}";
-
-    no strict;
-  SUBCLASS: for my $class (grep { m/::$/ } keys %SWISH::API::)
-    {
-
-        local *c = $SWISH::API::{$class};
-        (my $classname = $class) =~ s,::$,,;
-        my $subclass = $self->{_thisclass} . '::' . $classname;
-
-        next SUBCLASS if $classname eq $self->{_thissubclass};
-        next SUBCLASS if $classname eq $self->{_thispackage};
-
-      METH: foreach my $meth (keys %c)
-        {
-            next METH if $meth eq 'DESTROY';    # special name
-
-            next METH if $subclass->can($meth); # explicitly defined
-
-            #$self->logger("$subclass cannot -> $meth") if $self->log;
-
-            my $sub = $w->{$classname} || sub { };
-
-            *{"${subclass}::${meth}"} = sub {
-                my $sam = shift;
-                $sub->($sam, @_);
-
-                # alias the original method to just pass on what we got
-                *{'SWISH::API::' . $class . $meth}->($sae, @_);
-            };
-
-        }
-
-        #carp "$class Symbol table";
-        #_dispSymbols(\%{"${subclass}::"});
-    }
-
-  CLASS: for my $meth (grep { !m/::$/ } keys %SWISH::API::)
-    {
-
-        next CLASS if $meth eq 'DESTROY';    # special name
-
-        next CLASS if $self->{_thisclass}->can($meth);    # explicitly defined
-
-        #$self->logger("$self->{_thisclass} cannot -> $meth") if $self->log;
-
-        my $sub = $w->{$self->{_thisclass}} || sub { };
-
-        *{$self->{_thisclass} . "::${meth}"} = sub {
-            my $sam = shift;
-            $sub->($sam, @_);
-            *{'SWISH::API::' . $meth}->($sam->handle, @_);
-
-        };
-
-    }
-
-    #carp "$thisclass Symbol table";
-    #_dispSymbols(\%{$thisclass . '::'});
-    #carp "$thisclass can -> abort_last_error"
-    #  if $thisclass->can('abort_last_error');
-}
-
-sub make_methods
-{
-    my $self = shift;
-    my $w    = shift || $self->{wrappers} || {};
-
-    return if $self->{_make_methods_called}++;
-
-    #carp "thisclass = $self->{_thisclass}";
-    #carp "thispackage = $self->{_thispackage}";
-    #carp "thissubclass = $self->{_thissubclass}";
-
-    no strict;
-  SUBCLASS: for my $class (grep { m/::$/ } keys %SWISH::API::)
-    {
-
-        local *c = $SWISH::API::{$class};
-        (my $classname = $class) =~ s,::$,,;
-        my $subclass = $self->{_thisclass} . '::' . $classname;
-
-        next SUBCLASS if $classname eq $self->{_thissubclass};
-        next SUBCLASS if $classname eq $self->{_thispackage};
-
-      METH: foreach my $meth (keys %c)
-        {
-            next METH if $meth eq 'DESTROY';    # special name
-
-            #$self->logger("checking $subclass -> $meth");
-
-            my $before = $subclass->can($meth . '_before');
-            my $after  = $subclass->can($meth . '_after');
-
-            if ($before && $after)
-            {
-
-                #$self->logger("$subclass ->can $meth _before && _after");
-
-                my $orig = *{'SWISH::API::' . $class . $meth};
-
-                undef *{'SWISH::API::' . $class . $meth};
-
-                *{'SWISH::API::' . $class . $meth} = sub {
-                    my @r = $before->($self, @_);
-                    if (@r && defined $r[0])
-                    {
-                        @r = $orig->(@r);
-                    }
-                    else
-                    {
-                        @r = $orig->(@_);
-                    }
-                    $after->($self, $orig, [@_], [@r]);
-                };
-
-            }
-            elsif ($before)
-            {
-
-                #$self->logger("$subclass ->can $meth _before");
-
-                my $orig = *{'SWISH::API::' . $class . $meth};
-
-                undef *{'SWISH::API::' . $class . $meth};
-
-                *{'SWISH::API::' . $class . $meth} = sub {
-                    my @r = $before->($self, @_);
-                    if (@r && defined $r[0])
-                    {
-                        $orig->(@r);
-                    }
-                    else
-                    {
-                        $orig->(@_);
-                    }
-                };
-
-            }
-            elsif ($after)
-            {
-
-                #$self->logger("$subclass ->can $meth _after");
-
-                my $orig = *{'SWISH::API::' . $class . $meth};
-
-                undef *{'SWISH::API::' . $class . $meth};
-
-                *{'SWISH::API::' . $class . $meth} = sub {
-                    my @r = $orig->(@_);
-                    $after->($self, $orig, [@_], [@r]);
-                };
-
-            }
-
-        }
-
-        #carp "$class Symbol table";
-        #_dispSymbols(\%{"${subclass}::"});
-    }
-
-  CLASS: for my $meth (grep { !m/::$/ } keys %SWISH::API::)
-    {
-
-        next CLASS if $meth eq 'DESTROY';    # special name
-
-        my $subref;
-
-        if ($subref = $self->{_thisclass}->can($meth . '_before'))
-        {
-
-            $self->logger("$self->{_thisclass} ->can $meth _before");
-
-            *{$self->{_thisclass} . "::${meth}"} = sub {
-                my $sam = shift;
-                $subref->($sam, @_);
-                *{'SWISH::API::' . $class . $meth}->($sam->handle, @_);
-            };
-
-        }
-        elsif ($subref = $self->{_thisclass}->can($meth . '_after'))
-        {
-
-            $self->logger("$self->{_thisclass} ->can $meth _before");
-
-            *{$self->{_thisclass} . "::${meth}"} = sub {
-                my $sam = shift;
-                *{'SWISH::API::' . $class . $meth}->($sam->handle, @_);
-                $subref->($sam, @_);
-              }
-
-        }
-
-    }
-
-    #carp "$thisclass Symbol table";
-    #_dispSymbols(\%{$thisclass . '::'});
-    #carp "$thisclass can -> abort_last_error"
-    #  if $thisclass->can('abort_last_error');
-
+    my $p = join('::', __PACKAGE__, $_);
+    eval "require $p";
+    croak "can't load $p: $@" if $@;
 }
 
 sub new
 {
     my $proto = shift;
     my $class = ref($proto) || $proto;
-    my $self  = {};
-    bless($self, $class);
-    $self->_init(@_);    # private init of normal object
-    $self->init(@_);     # public init of object magic
+    my $self  = bless({}, $class);
+    $self->_init(@_);    # private init object
+    $self->init(@_);     # public method
     return $self;
 }
 
-sub _init
+# private methods for class building
+sub _set_log
 {
     my $self = shift;
-    $self->{_start} = time();
-
     unless (defined($self->log) && $self->log eq '0')
     {
         $self->{log} ||= *{STDERR};
     }
+}
+
+sub _parse_indexes
+{
+    my $self = shift;
 
     # pairs
     if (@_ and !(scalar(@_) % 2))
@@ -290,24 +79,89 @@ sub _init
             $self->indexes([split(/\ +/, $i)]);
         }
     }
-
-    # create our handle
-    $self->handle(@{$self->indexes});
-
 }
 
-sub init
+# placeholder in case subclass doesn't have one.
+sub init { }
+
+sub _init
 {
     my $self = shift;
+    $self->{_start} = time();
+    $self->_set_log;
+    $self->_parse_indexes(@_);
+    $self->_register_subclasses;
+    $self->setup;
+    $self->_setup_subclasses;
+    $self->handle(@{$self->indexes});
+}
 
-    # some namespace logic
-    $self->{_thisclass} = ref($self) || $self;
-    ($self->{_thispackage}  = __PACKAGE__)         =~ s,^SWISH::API::,,;
-    ($self->{_thissubclass} = $self->{_thisclass}) =~ s,^SWISH::API::,,;
-    
-    $self->wrap_methods;
-    $self->make_methods;
+our $loaded = 0;
 
+sub setup
+{
+    return if $loaded++;
+    native_wrappers(
+        [
+            qw(
+              IndexNames RankScheme Fuzzify HeaderNames
+              HeaderValue AbortLastError Error ErrorString
+              LastErrorMsg CriticalError
+              WordsByLetter
+              )
+        ],
+        __PACKAGE__,
+        'handle'
+                   );
+}
+
+sub _register_subclasses
+{
+
+    # foreach subclass, find which one is first in ISA
+    # and set that as the class->new() value for subclass()
+    my $self = shift;
+    my $base = ref($self);
+    if (!exists $bases{$base} or $self->register)
+    {
+        my %map;
+        my @isa = Class::ISA::self_and_super_path($base);
+
+      SUBCLASS: for my $sc (@subclasses)
+        {
+          INC: for my $class (@isa)
+            {
+                my $package = join('::', $class, $sc);
+                if (Class::Inspector->loaded($package))
+                {
+                    $map{$sc} = $package;
+                    next SUBCLASS;
+                }
+            }
+            if (!exists $map{$sc})
+            {
+                croak "no valid subclass for $sc";
+            }
+        }
+        $bases{$base} = \%map;
+    }
+    $self->{_sam_subs} = $bases{$base};
+}
+
+sub _setup_subclasses
+{
+
+    # call setup() for each subclass()
+    # NOTE that this allows real subclasses to override setup()
+    # and then call SUPER::setup()
+    # each of our @subclasses setup() should return if __PACKAGE__::loaded
+    # so their setup() only happens once.
+    my $self = shift;
+  SC: for my $sc (@subclasses)
+    {
+        my $class = $self->whichnew($sc);
+        $class->setup;
+    }
 }
 
 sub handle
@@ -323,27 +177,93 @@ sub handle
 sub logger
 {
     my $self = shift;
-    my $t    = '[' . scalar(localtime()) . ']';
+    return unless $self->log;
+    my $t = '[' . scalar(localtime()) . ']';
     for (@_)
     {
         print {$self->log} "$t $_\n";
     }
 }
 
-1;
+sub _dispSymbols
+{
+    my ($hashRef) = shift;
+    for (sort keys %$hashRef)
+    {
+        printf("%-20.20s| %s\n", $_, $hashRef->{$_});
+    }
+}
 
-package SWISH::API::More::Search;
-our @ISA = qw( SWISH::API::Search );
+sub native_wrappers
+{
+    my ($meths, $class, $acc) = @_;
+    no strict;
+  M: for my $meth (@$meths)
+    {
+        *{"${class}::${meth}"} = sub {
+            my $self = shift;
+            return $self->$acc->$meth(@_);
+        };
 
-1;
+        my $friendly = SWISH::API::perlize($meth);
 
-package SWISH::API::More::Results;
-our @ISA = qw( SWISH::API::Results );
+        *{"${class}::${friendly}"} = sub {
+            my $self = shift;
+            return $self->$acc->$meth(@_);
+        };
+    }
 
-1;
+    #_dispSymbols(\%{$class . '::'});
 
-package SWISH::API::More::Result;
-our @ISA = qw( SWISH::API::Result );
+}
+
+sub whichnew
+{
+    my $self = shift;
+    my $sub  = shift or croak "need SubClass name";
+    my $s    = $self->{_sam_subs}->{$sub};
+    return $s;
+}
+
+# "real" swish methods defined here
+sub New_Search_Object { shift->search(@_) }
+sub new_search_object { shift->search(@_) }
+
+sub search
+{
+    my $self = shift;
+    my $s    = $self->handle->New_Search_Object(@_);
+    return $self->whichnew('Search')->new({search => $s, base => $self});
+}
+
+sub Query { shift->query(@_) }
+
+sub query
+{
+    my $self = shift;
+    my $r    = $self->handle->Query(@_);
+    return $self->whichnew('Results')->new({results => $r, base => $self});
+}
+
+sub MetaList  { shift->ml(@_) }
+sub meta_list { shift->ml(@_) }
+
+sub ml
+{
+    my $self = shift;
+    my $ml   = $self->handle->MetaList(@_);
+    return $self->whichnew('MetaList')->new({ml => $ml, base => $self});
+}
+
+sub PropertyList  { shift->pl(@_) }
+sub property_list { shift->pl(@_) }
+
+sub pl
+{
+    my $self = shift;
+    my $ml   = $self->handle->PropertyList(@_);
+    return $self->whichnew('PropertyList')->new({ml => $ml, base => $self});
+}
 
 1;
 
@@ -355,27 +275,17 @@ SWISH::API::More - do more with the SWISH::API
 
 =head1 SYNOPSIS
 
+  # drop-in replacement for SWISH::API
+  my $swish = SWISH::API::More->new('my/index.swish-e');
+  
+  # or subclass to do More
   package My::SwishAPI;
   use base qw( SWISH::API::More );
   
   sub init
   {
     my $self = shift;
-    $self->SUPER::init(@_);
-
-    # wrap every SWISH::API method with one of your own
-    $self->{wrappers} = {
-
-        'My::SwishAPI' => sub {
-            my $sam = shift;
-            $sam->do_something(@_);
-        }
-
-    };
-
-    $self->make_methods;
-    $self->wrap_methods;
-    
+    $self->SUPER::init(@_);    
   }
   
   sub do_something
@@ -383,49 +293,19 @@ SWISH::API::More - do more with the SWISH::API
     my $self = shift;   # My::SwishAPI object
   }
   
-  
-  # or subclass in a traditional way
-
   sub new_search_object
   {
     my $self = shift;
     my $swish_handle = $self->handle;
     
     # do something with $swish_handle
+    # but make sure to return from superclass
+    $self->SUPER::new_search_object(@_);
   }
   
   1;
-  
-  # set _before and _after methods
-  # NOTE the perl and C-style names
-  
-  package My::SwishAPI::Results;
-
-  sub Hits_before
-  {
-    my $self = shift;
-    $self->logger("fetching hit count");
-    return;
-  }
-
-  sub hits_before { Hits_before(@_) }
-
-  sub Hits_after
-  {    
-    my $self = shift;    
-    my ($origref,$args,$ret) = @_;
-    my $h = $ret->[0];
-    $self->logger("found $h hits");
-    return $h;
-  }
-
-  sub hits_after { Hits_after(@_) }
-
-  1;
-  
-  # else where in a script
-  
-  use My::SwishAPI;
+    
+  package main;
   
   my $swish = My::SwishAPI->new(
                 indexes => [qw( path/to/index1 path/to/index2 )],
@@ -446,12 +326,13 @@ which isn't friendly for subclassing in a traditional Perlish way,
 SWISH::API::More allows you to subclass SWISH::API like you would
 a native Perl module.
 
-SWISH::API::More does some ugly Symbol table mangling to achieve its magic.
-Don't look at the wizard behind the curtain.
+Versions prior to 0.03 used ugly Symbol table mangling to achieve More
+magic. This was not thread-safe, nor played nicely with multiple subclasses
+using the same Perl process. Version 0.03 was a complete re-write.
 
 =head1 REQUIREMENTS
 
-L<SWISH::API>, L<Class::Accessor::Fast>
+L<SWISH::API>, L<Class::Accessor::Fast>, L<Class::Inspector>, L<Class::ISA>
 
 
 =head1 METHODS
@@ -474,14 +355,18 @@ You can use the returned C<$swish> object just like a SWISH::API object. But you
 also use the defined methods in SWISH::API::More -- or create your own by subclassing
 (see SYNOPSIS).
 
+The new() method does a bunch of class magic to make sure the correct subclasses
+are called. You can usually trust this to Just Work.
+
 You probably don't want to override new() in a subclass. See init() instead.
 
 =head2 init
 
-This makes the magic happen. If you subclass SWISH::API::More you'll likely
+If you subclass SWISH::API::More you'll likely
 want to override init(). See L<SWISH::API::Stat> for an example.
 
-init() is called internally by new(). Override init() not new().
+init() is called internally by new() every time you create a new object. 
+Override init() not new().
 
 
 =head2 handle
@@ -511,9 +396,39 @@ Set to C<0> to disable the default (but then don't expect logger() to work...).
 
 =head2 logger( I<msg> )
 
-Will print I<msg> to the filehandle set in log().
+Will print I<msg> to the filehandle set in log(). If log() is false, logger()
+will just return and ignore I<msg>.
 
+=head2 debug
 
+Get/set the debugging flag. Default is 0 (off).
+
+=head2 register
+
+This is a reserved accessor for use by subclasses that might want to create
+subclasses during runtime. If you get that deeply into the code that you think
+you might want to use register(), contact the author. Otherwise, just avoid creating
+a method called B<register> in your subclasses of SWISH::API::More and you'll
+not step on any toes you didn't mean to step on.
+
+=head2 setup
+
+This method is called for every subclass during new(). It is intended to run
+only once per process. See the source code for how it is used. It is documented here
+for the same reason register() is: it's a reserved method that you don't want
+to override (accidentally or not) without knowing what you're doing.
+
+=head2 search
+
+Shortcut for new_search_object().
+
+=head2 ml
+
+Shortcut for meta_list().
+
+=head2 pl
+
+Shortcut for property_list().
 
 =head1 EXAMPLES
 
@@ -523,7 +438,7 @@ See the L<SWISH::API::Stat> module for a working example.
 
 L<http://swish-e.org/>
 
-L<SWISH::API>, L<SWISH::API::Stat>
+L<SWISH::API>, L<SWISH::API::Stat>, L<SWISH::API::Object>
 
 =head1 AUTHOR
 

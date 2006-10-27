@@ -15,6 +15,9 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
   SWISH::API
+  Class::Accessor::Fast
+  Class::ISA
+  Class::Inspector
 
 COPYRIGHT AND LICENCE
 
