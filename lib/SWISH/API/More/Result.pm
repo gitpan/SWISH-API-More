@@ -4,6 +4,8 @@ use warnings;
 use base qw( Class::Accessor::Fast );
 __PACKAGE__->mk_accessors(qw( result base ));
 
+our $VERSION = '0.04';
+
 my $loaded = 0;
 sub setup
 {
@@ -12,7 +14,7 @@ sub setup
         [
             qw(
               Property ResultPropertyStr ResultIndexValue
-              FuzzyMode
+              FuzzyMode PropertyList MetaList
               )
         ],
         __PACKAGE__,
@@ -31,27 +33,6 @@ sub fw
       ->new({fw => $fw, base => $self->base});
 }
 
-sub MetaList  { shift->ml(@_) }
-sub meta_list { shift->ml(@_) }
-
-sub ml
-{
-    my $self = shift;
-    my $ml   = $self->result->MetaList(@_);
-    return $self->base->whichnew('MetaList')
-      ->new({ml => $ml, base => $self->base});
-}
-
-sub PropertyList  { shift->pl(@_) }
-sub property_list { shift->pl(@_) }
-
-sub pl
-{
-    my $self = shift;
-    my $pl   = $self->result->PropertyList(@_);
-    return $self->base->whichnew('PropertyList')
-      ->new({pl => $pl, base => $self->base});
-}
 
 1;
 

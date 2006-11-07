@@ -13,3 +13,9 @@ Revision history for Perl extension SWISH::API::More.
       and caches subclass names per object.
     * Split subclasses up into separate .pm files.
 
+0.04
+    * added VERSIONs to all subclasses to fix CPAN indexing
+    * fixed PropertyList and MetaList to return native objects without wrappers
+      (thanks to bmiele@ipnstock.com for the bug report)
+    * fixed bug in Result subclass with returning undef when native returns undef
+

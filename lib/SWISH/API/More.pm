@@ -9,9 +9,9 @@ use UNIVERSAL qw(isa);
 use Class::ISA;
 use Class::Inspector;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
-my @subclasses = qw( Search Results Result FuzzyWord MetaList PropertyList );
+my @subclasses = qw( Search Results Result FuzzyWord );
 my %bases      = ();
 
 __PACKAGE__->mk_accessors(
@@ -107,7 +107,7 @@ sub setup
               IndexNames RankScheme Fuzzify HeaderNames
               HeaderValue AbortLastError Error ErrorString
               LastErrorMsg CriticalError
-              WordsByLetter
+              WordsByLetter PropertyList MetaList
               )
         ],
         __PACKAGE__,
@@ -243,26 +243,6 @@ sub query
     my $self = shift;
     my $r    = $self->handle->Query(@_);
     return $self->whichnew('Results')->new({results => $r, base => $self});
-}
-
-sub MetaList  { shift->ml(@_) }
-sub meta_list { shift->ml(@_) }
-
-sub ml
-{
-    my $self = shift;
-    my $ml   = $self->handle->MetaList(@_);
-    return $self->whichnew('MetaList')->new({ml => $ml, base => $self});
-}
-
-sub PropertyList  { shift->pl(@_) }
-sub property_list { shift->pl(@_) }
-
-sub pl
-{
-    my $self = shift;
-    my $ml   = $self->handle->PropertyList(@_);
-    return $self->whichnew('PropertyList')->new({ml => $ml, base => $self});
 }
 
 1;
@@ -421,14 +401,6 @@ to override (accidentally or not) without knowing what you're doing.
 =head2 search
 
 Shortcut for new_search_object().
-
-=head2 ml
-
-Shortcut for meta_list().
-
-=head2 pl
-
-Shortcut for property_list().
 
 =head1 EXAMPLES
 

@@ -4,6 +4,8 @@ use warnings;
 use base qw( Class::Accessor::Fast );
 __PACKAGE__->mk_accessors(qw( results base ));
 
+our $VERSION = '0.04';
+
 my $loaded = 0;
 sub setup
 {
@@ -25,6 +27,7 @@ sub next_result
 {
     my $self = shift;
     my $n    = $self->results->NextResult(@_);
+    return undef unless defined $n;
     return $self->base->whichnew('Result')
       ->new({result => $n, base => $self->base});
 }
