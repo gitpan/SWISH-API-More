@@ -3,13 +3,12 @@ use strict;
 use warnings;
 use SWISH::API;
 use Carp;
-use Data::Dump qw( pp );
 use base qw( Class::Accessor::Fast );
 use UNIVERSAL qw(isa);
 use Class::ISA;
 use Class::Inspector;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 my @subclasses = qw( Search Results Result FuzzyWord );
 my %bases      = ();
@@ -69,7 +68,7 @@ sub _parse_indexes
     # S::A style
     else
     {
-        my $i = shift;
+        my $i = shift || 'index.swish-e';
         if (ref $i eq 'ARRAY')
         {
             $self->indexes($i);

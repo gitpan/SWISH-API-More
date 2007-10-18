@@ -19,3 +19,7 @@ Revision history for Perl extension SWISH::API::More.
       (thanks to bmiele@ipnstock.com for the bug report)
     * fixed bug in Result subclass with returning undef when native returns undef
 
+0.05
+    * added default index value 'index.swish-e' to mimic libswish-e default
+    * no longer require SWISH::API since it is not in cpan. Warn about it in tests.
+

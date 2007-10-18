@@ -3,7 +3,7 @@ WriteMakefile(
     NAME              => 'SWISH::API::More',
     VERSION_FROM      => 'lib/SWISH/API/More.pm', # finds $VERSION
     PREREQ_PM         => {
-                      'SWISH::API' => '0.04',
+                      #'SWISH::API' => '0.04',  # we test for this in t/ but since it isn't on cpan we don't require it.
                       'Data::Dump' => '1.06',
                       'Class::Accessor::Fast' => '0.22',
                       'Class::ISA' => 0.01,
