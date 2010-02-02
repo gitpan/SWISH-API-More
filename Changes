@@ -23,3 +23,7 @@ Revision history for Perl extension SWISH::API::More.
     * added default index value 'index.swish-e' to mimic libswish-e default
     * no longer require SWISH::API since it is not in cpan. Warn about it in tests.
 
+0.06     01 Feb 2010
+    * added die_on_error() method.
+
+

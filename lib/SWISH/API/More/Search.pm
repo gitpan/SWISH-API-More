@@ -4,7 +4,7 @@ use warnings;
 use base qw( Class::Accessor::Fast );
 __PACKAGE__->mk_accessors(qw( search base ));
 
-our $VERSION = '0.04';
+our $VERSION = '0.06';
 
 my $loaded = 0;
 sub setup

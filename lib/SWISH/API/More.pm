@@ -8,7 +8,7 @@ use UNIVERSAL qw(isa);
 use Class::ISA;
 use Class::Inspector;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 my @subclasses = qw( Search Results Result FuzzyWord );
 my %bases      = ();
@@ -171,6 +171,13 @@ sub handle
         $self->{handle} = SWISH::API->new(join(' ', @_));
     }
     return $self->{handle};
+}
+
+sub die_on_error {
+    my $self = shift;
+    my $level = shift || 'error';
+    die( join( ' : ', $self->{handle}->error_string, $self->{handle}->last_error_msg ) )
+        if $self->{handle}->$level;
 }
 
 sub logger
@@ -381,6 +388,12 @@ will just return and ignore I<msg>.
 =head2 debug
 
 Get/set the debugging flag. Default is 0 (off).
+
+=head2 die_on_error([ I<error_name> ])
+
+Convenience wrapper around the SWISH::API error handling methods. Will die()
+with the last error messages if I<error_name> method returns true. I<error_name>
+defaults to 'error'. Possible values include 'critical_error'. See SWISH::API.
 
 =head2 register
 
