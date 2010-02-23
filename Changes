@@ -26,4 +26,6 @@ Revision history for Perl extension SWISH::API::More.
 0.06     01 Feb 2010
     * added die_on_error() method.
 
+0.07     23 Feb 2010
+    * add Results->query accessor method.
 

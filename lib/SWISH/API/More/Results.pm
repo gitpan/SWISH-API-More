@@ -2,9 +2,9 @@ package SWISH::API::More::Results;
 use strict;
 use warnings;
 use base qw( Class::Accessor::Fast );
-__PACKAGE__->mk_accessors(qw( results base ));
+__PACKAGE__->mk_accessors(qw( results base query ));
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 my $loaded = 0;
 sub setup

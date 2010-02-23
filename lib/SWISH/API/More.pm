@@ -8,7 +8,7 @@ use UNIVERSAL qw(isa);
 use Class::ISA;
 use Class::Inspector;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 my @subclasses = qw( Search Results Result FuzzyWord );
 my %bases      = ();
@@ -184,7 +184,7 @@ sub logger
 {
     my $self = shift;
     return unless $self->log;
-    my $t = '[' . scalar(localtime()) . ']';
+    my $t = join('', '[', scalar(localtime()), '] [', $$, ']');
     for (@_)
     {
         print {$self->log} "$t $_\n";
